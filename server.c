@@ -40,6 +40,13 @@
 LRESULT WINAPI MainWndProc( HWND, UINT, WPARAM, LPARAM );
 DWORD WINAPI mailThread(LPVOID);
 
+typedef struct list
+{
+	HANDLE pThread;
+	planet_type *planet;
+	planetList *next;
+
+}planetList;
 
 
 HDC hDC;		/* Handle to Device Context, gets set 1st time in MainWndProc */
@@ -71,7 +78,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 							/* The tile of the window, the callback function */
 							/* and the backgrond color */
 
-	hWnd = windowCreate (hPrevInstance, hInstance, nCmdShow, "Himmel", MainWndProc, COLOR_WINDOW+1);
+	hWnd = windowCreate (hPrevInstance, hInstance, nCmdShow, "Himmel", MainWndProc, COLOR_WINDOW+3);
 
 							/* start the timer for the periodic update of the window    */
 							/* (this is a one-shot timer, which means that it has to be */
@@ -230,6 +237,21 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
    return 0;
 }
 
+planet_type* addPlanet(planetList *planet)
+{
+	
+
+}
+planet_type removePlanet()
+{
+
+
+
+}
+planet_type* updatePlanet()
+{
+
+}
 
 
 
