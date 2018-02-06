@@ -22,6 +22,10 @@
 #include <math.h>
 #include "wrapper.h"
 
+ planet_type *HeadPlanet;
+ void addPlanet(planet_type *data);
+
+
 							/* the server uses a timer to periodically update the presentation window */
 							/* here is the timer id and timer period defined                          */
 
@@ -39,14 +43,6 @@
 
 LRESULT WINAPI MainWndProc( HWND, UINT, WPARAM, LPARAM );
 DWORD WINAPI mailThread(LPVOID);
-
-typedef struct list
-{
-	HANDLE pThread;
-	planet_type *planet;
-	planetList *next;
-
-}planetList;
 
 
 HDC hDC;		/* Handle to Device Context, gets set 1st time in MainWndProc */
@@ -72,6 +68,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 	HWND hWnd;
 	DWORD threadID;
 	MSG msg;
+
 	
 
 							/* Create the window, 3 last parameters important */
@@ -106,6 +103,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 		DispatchMessage( &msg );
 	}
 
+
 	return msg.wParam;
 }
 
@@ -127,7 +125,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* NOTE: The name of a mailslot must start with "\\\\.\\mailslot\\"  */
 
 	
-	mailbox = mailslotCreate ("mailbox");
+	mailbox = mailslotCreate ("\\\\.\\mailslot\\mailslot");
 
 
 	for(;;) {				
@@ -142,6 +140,13 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* NOTE: It is appropriate to replace this code with something */
 							/*       that match your needs here.                           */
 		posY++;  
+
+
+		planet_type *data = malloc(sizeof(planet_type));
+		addPlanet(data);
+
+
+
 							/* (hDC is used reference the previously created window) */							
 		TextOut(hDC, 10, 50+posY%200, buffer, bytesRead);
 	}
@@ -150,6 +155,8 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* (in this example we ignore this, and happily continue...) */
     }
   }
+
+	
 
   return 0;
 }
@@ -237,19 +244,84 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
    return 0;
 }
 
-planet_type* addPlanet(planetList *planet)
+void addPlanet(planet_type *data)
 {
 	
+	
+
+	if (HeadPlanet == NULL) {
+		printf("YOU HAVE NO PLANET, YOU PEASANT");
+		HeadPlanet = data;
+		printf("BUT YOU SURE HELL DESERVE ONE! kind regards, Steve Jobs\n");
+	}
+
+	else {
+	
+		 planet_type *currentPlanet = HeadPlanet;
+
+		while (!(currentPlanet->next == NULL))
+		{
+			currentPlanet = currentPlanet->next;
+		}
+
+		currentPlanet->next = data;
+
+	}
+
+// en thread create med update planet som input
+
+
+
+
 
 }
-planet_type removePlanet()
+void removePlanet( planet_type *remove)
 {
+	 planet_type *currentPlanet = HeadPlanet;
+	 planet_type *planetToRemove = remove;
+	 planet_type *previous = HeadPlanet;
+
+	if (HeadPlanet == NULL)
+	{
+		printf("No planet to remove, because you've got none you peasant");
+		return;
+	}
+	else
+	{
+		while (strcmp(currentPlanet->pid, remove->pid)!= 0) 
+		{
+			previous = currentPlanet;
+			currentPlanet = currentPlanet->next;
+		}
+
+		if (currentPlanet->next == NULL) {
+			free(currentPlanet);
+			previous->next = NULL;
+		}
+		else{
+			planetToRemove = currentPlanet;
+			previous = currentPlanet->next;
+			currentPlanet = currentPlanet->next->next;
+			free(planetToRemove);
+			planetToRemove = NULL;
+		}
 
 
 
+	}
+	
+
+
+	return ;
 }
 planet_type* updatePlanet()
 {
+	// hella lotta koda
+
+
+
+	//removePlanet(data);
+	//mailslotWrite(mailbox, data, sizeof(data));
 
 }
 
