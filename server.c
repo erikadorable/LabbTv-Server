@@ -75,7 +75,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 							/* The tile of the window, the callback function */
 							/* and the backgrond color */
 
-	hWnd = windowCreate (hPrevInstance, hInstance, nCmdShow, "Himmel", MainWndProc, COLOR_WINDOW+3);
+	hWnd = windowCreate (hPrevInstance, hInstance, nCmdShow, "Himmel", MainWndProc, COLOR_WINDOW+1);
 
 							/* start the timer for the periodic update of the window    */
 							/* (this is a one-shot timer, which means that it has to be */
@@ -119,6 +119,8 @@ DWORD WINAPI mailThread(LPVOID arg) {
 	DWORD bytesRead;
 	static int posY = 0;
 	HANDLE mailbox;
+	planet_type *data = malloc(sizeof(planet_type));
+	char text[50];
 
 							/* create a mailslot that clients can use to pass requests through   */
 							/* (the clients use the name below to get contact with the mailslot) */
@@ -134,7 +136,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* displays them in the presentation window                               */
 							/* NOTE: binary data can also be sent and received, e.g. planet structures*/
  
-	bytesRead = mailslotRead (mailbox, buffer, strlen(buffer)); 
+	bytesRead = mailslotRead(mailbox, &data, sizeof(data)); 
 
 	if(bytesRead!= 0) {
 							/* NOTE: It is appropriate to replace this code with something */
@@ -142,13 +144,13 @@ DWORD WINAPI mailThread(LPVOID arg) {
 		posY++;  
 
 
-		planet_type *data = malloc(sizeof(planet_type));
+		
 		addPlanet(data);
 
-
+		sprintf_s(text, "%d", bytesRead);
 
 							/* (hDC is used reference the previously created window) */							
-		TextOut(hDC, 10, 50+posY%200, buffer, bytesRead);
+		TextOut(hDC, 10, 50+posY%200, text, strlen(text));
 	}
 	else {
 							/* failed reading from mailslot                              */

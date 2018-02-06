@@ -62,6 +62,10 @@ HANDLE mailslotConnect(char * name) {
 		return 1;
 
 	}
+	else
+	{
+		printf("Connected successfully!");
+	}
 	
 	return hFile;
 	
@@ -82,9 +86,17 @@ int	mailslotRead(HANDLE mailbox, void *msg, int msgSize) {
 	/* Read a msg from a mailslot, return nr */
 	/* of successful bytes read              */
 
-	DWORD bytesRead;
-	ReadFile(mailbox, msg, msgSize, &bytesRead, NULL);
-
+	int bytesRead;
+	HANDLE mailslot = ReadFile(mailbox, msg, msgSize, &bytesRead, NULL);
+	if (!mailslot)
+	{
+		printf("Readfile failed with %d", GetLastError());
+		return FALSE;
+	}
+	else
+	{
+		printf("Slot read successfully!");
+	}
 
 
 	return bytesRead;
