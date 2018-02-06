@@ -119,7 +119,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 	DWORD bytesRead;
 	static int posY = 0;
 	HANDLE mailbox;
-	planet_type *data = malloc(sizeof(planet_type));
+	planet_type *data;
 	char text[50];
 
 							/* create a mailslot that clients can use to pass requests through   */

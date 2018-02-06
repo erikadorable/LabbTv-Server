@@ -86,7 +86,7 @@ int	mailslotRead(HANDLE mailbox, void *msg, int msgSize) {
 	/* Read a msg from a mailslot, return nr */
 	/* of successful bytes read              */
 
-	int bytesRead;
+	DWORD bytesRead;
 	HANDLE mailslot = ReadFile(mailbox, msg, msgSize, &bytesRead, NULL);
 	if (!mailslot)
 	{
