@@ -136,7 +136,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* displays them in the presentation window                               */
 							/* NOTE: binary data can also be sent and received, e.g. planet structures*/
  
-	bytesRead = mailslotRead(mailbox, &data, sizeof(data)); 
+	bytesRead = mailslotRead(mailbox, &data, sizeof(planet_type)); 
 
 	if(bytesRead!= 0) {
 							/* NOTE: It is appropriate to replace this code with something */
