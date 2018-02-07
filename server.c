@@ -152,7 +152,8 @@ DWORD WINAPI mailThread(LPVOID arg) {
 
 
 							/* (hDC is used reference the previously created window) */							
-		TextOut(hDC, 10, 50+posY%200, data, sizeof(data));
+		//TextOut(hDC, data->sx, 50+(int)(data->sy)%200, data, sizeof(data->name));
+		SetPixel(hDC, data->sx, 50 + (int)(data->sy) % 200, data, (COLORREF)3);
 	}
 	else {
 							/* failed reading from mailslot                              */
@@ -222,6 +223,7 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 							/*       for showing something in the window.                */
 			context = BeginPaint( hWnd, &ps ); /* (you can safely remove the following line of code) */
 			TextOut( context, 10, 10, "Welcome to Erika and Linus Universe!", 36 ); /* 13 is the string length */
+			
 			EndPaint( hWnd, &ps );
 			break;
 							/**************************************************************\
@@ -318,13 +320,42 @@ void removePlanet( planet_type *remove)
 
 	return ;
 }
-planet_type* updatePlanet()
+planet_type* updatePlanet(planet_type *planet)
 {
-	// hella lotta koda
+	// if planet > 0 så räkna 
+
+	while (planet > 0) {
+
+		double atot_x = 0;
+		double atot_y = 0;
+
+		int r = sqrt(pow((HeadPlanet->sx) - (planet->sx), 2) + pow((HeadPlanet->sy) - (planet->sy), 2));
+	
+	
+	
+	
+	
+		if (planet->sx >= 800 || planet->sy >= 600) {  //Om planeten går out of bounds.
+		
+			planet->life = 0;
+			removePlanet(planet);
+		}
 
 
+		if (planet <= 0) {
+			removePlanet(planet);
+			return 0;
+		}
 
-	//removePlanet(data);
+		
+		
+		
+		
+		planet->life--;
+		Sleep(UPDATE_FREQ);
+	}
+
+	  //else removePlanet(data);
 	//mailslotWrite(mailbox, data, sizeof(data));
 
 }
