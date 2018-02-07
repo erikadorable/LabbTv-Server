@@ -119,15 +119,18 @@ DWORD WINAPI mailThread(LPVOID arg) {
 	DWORD bytesRead;
 	static int posY = 0;
 	HANDLE mailbox;
-	planet_type *data;
+	planet_type *data = (planet_type*) malloc(sizeof(planet_type));
+	int apa = sizeof(planet_type);
 	char text[50];
+	LPTSTR Slot = TEXT("\\\\.\\mailslot\\mailslot");
+
 
 							/* create a mailslot that clients can use to pass requests through   */
 							/* (the clients use the name below to get contact with the mailslot) */
 							/* NOTE: The name of a mailslot must start with "\\\\.\\mailslot\\"  */
 
 	
-	mailbox = mailslotCreate ("\\\\.\\mailslot\\mailslot");
+	mailbox = mailslotCreate(Slot);
 
 
 	for(;;) {				
@@ -136,7 +139,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* displays them in the presentation window                               */
 							/* NOTE: binary data can also be sent and received, e.g. planet structures*/
  
-	bytesRead = mailslotRead(mailbox, &data, sizeof(planet_type)); 
+	bytesRead = mailslotRead(mailbox, data, sizeof(planet_type));
 
 	if(bytesRead!= 0) {
 							/* NOTE: It is appropriate to replace this code with something */
@@ -147,10 +150,9 @@ DWORD WINAPI mailThread(LPVOID arg) {
 		
 		addPlanet(data);
 
-		sprintf_s(text, "%d", bytesRead);
 
 							/* (hDC is used reference the previously created window) */							
-		TextOut(hDC, 10, 50+posY%200, text, strlen(text));
+		TextOut(hDC, 10, 50+posY%200, data, sizeof(data));
 	}
 	else {
 							/* failed reading from mailslot                              */
@@ -219,7 +221,7 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 							/* NOTE: The code for this message can be removed. It's just */
 							/*       for showing something in the window.                */
 			context = BeginPaint( hWnd, &ps ); /* (you can safely remove the following line of code) */
-			TextOut( context, 10, 10, "Hello, World!", 13 ); /* 13 is the string length */
+			TextOut( context, 10, 10, "Welcome to Erika and Linus Universe!", 36 ); /* 13 is the string length */
 			EndPaint( hWnd, &ps );
 			break;
 							/**************************************************************\
@@ -243,7 +245,7 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 		default:
 			return( DefWindowProc( hWnd, msg, wParam, lParam )); 
    }
-   return 0;
+   return 0; 
 }
 
 void addPlanet(planet_type *data)

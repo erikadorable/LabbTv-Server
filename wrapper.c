@@ -86,11 +86,13 @@ int	mailslotRead(HANDLE mailbox, void *msg, int msgSize) {
 	/* Read a msg from a mailslot, return nr */
 	/* of successful bytes read              */
 
+
 	DWORD bytesRead;
 	HANDLE mailslot = ReadFile(mailbox, msg, msgSize, &bytesRead, NULL);
 	if (!mailslot)
 	{
 		printf("Readfile failed with %d", GetLastError());
+
 		return FALSE;
 	}
 	else
