@@ -24,7 +24,8 @@
 
  planet_type *HeadPlanet;
  void addPlanet(planet_type *data);
-
+ void removePlanet(planet_type *remove);
+ planet_type* updatePlanet(planet_type *planet);
 
 							/* the server uses a timer to periodically update the presentation window */
 							/* here is the timer id and timer period defined                          */
@@ -252,9 +253,7 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 
 void addPlanet(planet_type *data)
 {
-	
-	
-
+	planet_type *currentPlanet = HeadPlanet;
 	if (HeadPlanet == NULL) {
 		printf("YOU HAVE NO PLANET, YOU PEASANT");
 		HeadPlanet = data;
@@ -263,8 +262,6 @@ void addPlanet(planet_type *data)
 
 	else {
 	
-		 planet_type *currentPlanet = HeadPlanet;
-
 		while (!(currentPlanet->next == NULL))
 		{
 			currentPlanet = currentPlanet->next;
@@ -274,11 +271,8 @@ void addPlanet(planet_type *data)
 
 	}
 
+	threadCreate(updatePlanet, data);
 // en thread create med update planet som input
-
-
-
-
 
 }
 void removePlanet( planet_type *remove)
@@ -315,26 +309,34 @@ void removePlanet( planet_type *remove)
 
 
 	}
-	
-
 
 	return ;
 }
 planet_type* updatePlanet(planet_type *planet)
 {
-	// if planet > 0 så räkna 
-
+	double gravity = 6.67259e-11;
+	int dt = 10;
+	planet_type *currentPlanet = HeadPlanet;
 	while (planet > 0) {
 
-		double atot_x = 0;
-		double atot_y = 0;
+		double atot_x,atot_y = 0;
+		
+		//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
+		int r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
+		int a1 = gravity * (currentPlanet->mass * planet->mass) / (r*r);
+		
+		//acceleration i x och y led
+		atot_x = a1 * (currentPlanet->sx - planet->sx);
+		atot_y = a1 * (currentPlanet->sy - planet->sy);
+	
+		//planetens nya position och acceleration
+		planet->vx = (atot_x * dt);
+		planet->sx = (planet->vx + atot_x * dt);
 
-		int r = sqrt(pow((HeadPlanet->sx) - (planet->sx), 2) + pow((HeadPlanet->sy) - (planet->sy), 2));
-	
-	
-	
-	
-	
+		planet->vy = (atot_y * dt);
+		planet->sy = (planet->vy + atot_y *dt);
+
+
 		if (planet->sx >= 800 || planet->sy >= 600) {  //Om planeten går out of bounds.
 		
 			planet->life = 0;
