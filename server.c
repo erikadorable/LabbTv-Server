@@ -285,8 +285,6 @@ void addPlanet(planet_type *data)
 }
 void removePlanet( planet_type *remove)
 {
-	
-
 	planet_type *currentPlanet = HeadPlanet;
 	planet_type *planetToRemove = remove;
 	planet_type *previous = HeadPlanet;
@@ -300,25 +298,28 @@ void removePlanet( planet_type *remove)
 		return;
 	}
 	
-	while (currentPlanet != remove) 
+	while (currentPlanet->next != NULL)
 	{
 		previous = currentPlanet;
 		currentPlanet = currentPlanet->next;
-	}
 
-	if (currentPlanet->next == NULL)
-	{
-		free(currentPlanet);
-		previous->next = NULL;
+		if (currentPlanet->next == remove)
+		{
+			if (currentPlanet->next != NULL) 
+			{
+				planetToRemove = currentPlanet->next;
+				previous = currentPlanet;
+				free(planetToRemove);
+				planetToRemove = NULL;
+				
+			}
+			else
+			{
+				free(currentPlanet);
+				previous->next = NULL;
+			}
+		}
 	}
-	else{
-		planetToRemove = currentPlanet;
-		previous = currentPlanet->next;
-		currentPlanet = currentPlanet->next->next;
-		free(planetToRemove);
-		planetToRemove = NULL;
-	}
-		
 	
 	ReleaseMutex(myMutex);
 	return ;
@@ -334,11 +335,12 @@ planet_type* updatePlanet(planet_type *planet)
 
 		double atot_x = 0;
 		double atot_y = 0;
-		while (TRUE)
-		{
-			waitResult = WaitForSingleObject(myMutex, INFINITE);
+		
+		waitResult = WaitForSingleObject(myMutex, INFINITE);
 
-			if (waitResult == WAIT_OBJECT_0)
+		if (waitResult == WAIT_OBJECT_0)
+		{
+			while (currentPlanet->next != NULL)
 			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
 				int r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
@@ -347,36 +349,33 @@ planet_type* updatePlanet(planet_type *planet)
 				//acceleration i x och y led
 				atot_x += a1 * (currentPlanet->sx - planet->sx) / r;
 				atot_y += a1 * (currentPlanet->sy - planet->sy) / r;
-
-				//planetens nya position och acceleration
-				planet->vx = (planet->vx + atot_x * dt);
-				planet->sx = (planet->vx + atot_x * dt);
-
-				planet->vy = (planet->vy + atot_y * dt);
-				planet->sy = (planet->vy + atot_y * dt);
-
-				planet->life--;
-
-				if (planet->sx >= 800 || planet->sy >= 600) {  //Om planeten går out of bounds.
-
-					planet->life = 0;
-					removePlanet(planet);
-				}
-
-
-				if (planet->life <= 0) {
-					removePlanet(planet);
-					return 0;
-				}
-
-				
-				
 			}
-			ReleaseMutex(myMutex);
+			currentPlanet = currentPlanet->next;
 		}
+		ReleaseMutex(myMutex);
+			//planetens nya position och acceleration
+		planet->vx = (planet->vx + atot_x * dt);
+		planet->sx = (planet->vx + atot_x * dt);
+
+		planet->vy = (planet->vy + atot_y * dt);
+		planet->sy = (planet->vy + atot_y * dt);
+		planet->life--;
+		if (planet->sx >= 800 || planet->sy >= 600) //Om planeten går out of bounds.
+		{  
+			planet->life = 0;
+			removePlanet(planet);
+			return 0;
+		}
+		if (planet->life <= 0)
+		{
+			removePlanet(planet);
+			return 0;
+		}
+
 		Sleep(UPDATE_FREQ);
 	}
 
+	return 0;
 	  //else removePlanet(data);
 	//mailslotWrite(mailbox, data, sizeof(data));
 
