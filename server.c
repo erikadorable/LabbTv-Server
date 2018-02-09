@@ -255,26 +255,33 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 void addPlanet(planet_type *data)
 {
 	planet_type *currentPlanet = HeadPlanet;
-	if (HeadPlanet == NULL) {
-		printf("YOU HAVE NO PLANET, YOU PEASANT");
-		HeadPlanet = data;
-		printf("BUT YOU SURE HELL DESERVE ONE! kind regards, Steve Jobs\n");
-	}
 
-	else {
-		
-		while (!(currentPlanet->next == NULL))
-		{
-			currentPlanet = currentPlanet->next;
+	DWORD waitResult = WaitForSingleObject(myMutex, INFINITE);
+
+
+	if (waitResult == WAIT_OBJECT_0) {
+		if (HeadPlanet == NULL) {
+			printf("YOU HAVE NO PLANET, YOU PEASANT");
+			HeadPlanet = data;
+			printf("BUT YOU SURE HELL DESERVE ONE! kind regards, Steve Jobs\n");
 		}
 
-		currentPlanet->next = data;
+		else {
 
+			while (!(currentPlanet->next == NULL))
+			{
+				currentPlanet = currentPlanet->next;
+			}
+
+			currentPlanet->next = data;
+
+		}
+
+		threadCreate(updatePlanet, data);
+		// en thread create med update planet som input
 	}
 
-	threadCreate(updatePlanet, data);
-// en thread create med update planet som input
-
+	ReleaseMutex(myMutex);
 }
 void removePlanet( planet_type *remove)
 {
