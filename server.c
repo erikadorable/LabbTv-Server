@@ -22,10 +22,11 @@
 #include <math.h>
 #include "wrapper.h"
 
- planet_type *HeadPlanet;
- void addPlanet(planet_type *data);
- void removePlanet(planet_type *remove);
- planet_type* updatePlanet(planet_type *planet);
+HANDLE myMutex;
+planet_type *HeadPlanet;
+void addPlanet(planet_type *data);
+void removePlanet(planet_type *remove);
+planet_type* updatePlanet(planet_type *planet);
 
 							/* the server uses a timer to periodically update the presentation window */
 							/* here is the timer id and timer period defined                          */
@@ -261,7 +262,7 @@ void addPlanet(planet_type *data)
 	}
 
 	else {
-	
+		
 		while (!(currentPlanet->next == NULL))
 		{
 			currentPlanet = currentPlanet->next;
@@ -277,83 +278,95 @@ void addPlanet(planet_type *data)
 }
 void removePlanet( planet_type *remove)
 {
-	 planet_type *currentPlanet = HeadPlanet;
-	 planet_type *planetToRemove = remove;
-	 planet_type *previous = HeadPlanet;
+	
 
-	if (HeadPlanet == NULL)
+	planet_type *currentPlanet = HeadPlanet;
+	planet_type *planetToRemove = remove;
+	planet_type *previous = HeadPlanet;
+	
+	WaitForSingleObject(myMutex, INFINITE);
+
+	if (HeadPlanet == remove)
 	{
-		printf("No planet to remove, because you've got none you peasant");
+		free(HeadPlanet);
+	
 		return;
 	}
-	else
+	
+	while (currentPlanet != remove) 
 	{
-		while (strcmp(currentPlanet->pid, remove->pid)!= 0) 
-		{
-			previous = currentPlanet;
-			currentPlanet = currentPlanet->next;
-		}
-
-		if (currentPlanet->next == NULL) {
-			free(currentPlanet);
-			previous->next = NULL;
-		}
-		else{
-			planetToRemove = currentPlanet;
-			previous = currentPlanet->next;
-			currentPlanet = currentPlanet->next->next;
-			free(planetToRemove);
-			planetToRemove = NULL;
-		}
-
-
-
+		previous = currentPlanet;
+		currentPlanet = currentPlanet->next;
 	}
 
+	if (currentPlanet->next == NULL)
+	{
+		free(currentPlanet);
+		previous->next = NULL;
+	}
+	else{
+		planetToRemove = currentPlanet;
+		previous = currentPlanet->next;
+		currentPlanet = currentPlanet->next->next;
+		free(planetToRemove);
+		planetToRemove = NULL;
+	}
+		
+	
+	ReleaseMutex(myMutex);
 	return ;
 }
 planet_type* updatePlanet(planet_type *planet)
 {
+	myMutex = CreateMutex(NULL, FALSE, NULL);
+	DWORD waitResult;
 	double gravity = 6.67259e-11;
 	int dt = 10;
 	planet_type *currentPlanet = HeadPlanet;
-	while (planet > 0) {
+	while (planet->life > 0) {
 
-		double atot_x,atot_y = 0;
-		
-		//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
-		int r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
-		int a1 = gravity * (currentPlanet->mass * planet->mass) / (r*r);
-		
-		//acceleration i x och y led
-		atot_x = a1 * (currentPlanet->sx - planet->sx);
-		atot_y = a1 * (currentPlanet->sy - planet->sy);
-	
-		//planetens nya position och acceleration
-		planet->vx = (atot_x * dt);
-		planet->sx = (planet->vx + atot_x * dt);
+		double atot_x = 0;
+		double atot_y = 0;
+		while (TRUE)
+		{
+			waitResult = WaitForSingleObject(myMutex, INFINITE);
 
-		planet->vy = (atot_y * dt);
-		planet->sy = (planet->vy + atot_y *dt);
+			if (waitResult == WAIT_OBJECT_0)
+			{
+				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
+				int r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
+				int a1 = gravity * (currentPlanet->mass) / (r*r);
+
+				//acceleration i x och y led
+				atot_x += a1 * (currentPlanet->sx - planet->sx) / r;
+				atot_y += a1 * (currentPlanet->sy - planet->sy) / r;
+
+				//planetens nya position och acceleration
+				planet->vx = (planet->vx + atot_x * dt);
+				planet->sx = (planet->vx + atot_x * dt);
+
+				planet->vy = (planet->vy + atot_y * dt);
+				planet->sy = (planet->vy + atot_y * dt);
+
+				planet->life--;
+
+				if (planet->sx >= 800 || planet->sy >= 600) {  //Om planeten går out of bounds.
+
+					planet->life = 0;
+					removePlanet(planet);
+				}
 
 
-		if (planet->sx >= 800 || planet->sy >= 600) {  //Om planeten går out of bounds.
-		
-			planet->life = 0;
-			removePlanet(planet);
+				if (planet->life <= 0) {
+					removePlanet(planet);
+					return 0;
+				}
+
+				
+				
+			}
+			ReleaseMutex(myMutex);
 		}
-
-
-		if (planet <= 0) {
-			removePlanet(planet);
-			return 0;
-		}
-
-		
-		
-		
-		
-		planet->life--;
 		Sleep(UPDATE_FREQ);
 	}
 
