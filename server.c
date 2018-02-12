@@ -187,7 +187,9 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
   
 	PAINTSTRUCT ps;
 	static int posX = 10;
-	int posY;
+	int posY; 
+	int x = 0;
+	int y = 0;
 	HANDLE context;
 	static DWORD color = 0;
   
@@ -209,6 +211,12 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 
 							/* here we draw a simple sinus curve in the window    */
 							/* just to show how pixels are drawn                  */
+
+			while (1>0){
+			SetPixel(hDC, currentPlanet , y, (COLORREF) color);
+		
+			
+			}
 			posX += 4;
 			posY = (int) (10 * sin(posX / (double) 30) + 20);
 			SetPixel(hDC, posX % 547, posY, (COLORREF) color);
@@ -255,7 +263,6 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 void addPlanet(planet_type *data)
 {
 	planet_type *currentPlanet = HeadPlanet;
-
 	DWORD waitResult = WaitForSingleObject(myMutex, INFINITE);
 
 
@@ -278,6 +285,7 @@ void addPlanet(planet_type *data)
 		}
 
 		threadCreate(updatePlanet, data);
+		
 		// en thread create med update planet som input
 	}
 
@@ -371,16 +379,13 @@ planet_type* updatePlanet(planet_type *planet)
 
 		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <=0) //Om planeten går out of bounds eller om den dör
 		{  
-			if (planet->sx >= 800 || planet->sy >= 600) {
-				planet->life = 0;
-			}
 
 			removePlanet(planet);
 	
 			*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
 			*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
 		
-			hWrite = mailslotConnect(*mailslotPid);
+			hWrite = mailslotConnect(*mailslotPid); 
 
 			if (hWrite == INVALID_HANDLE_VALUE) {
 				printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
@@ -400,8 +405,7 @@ planet_type* updatePlanet(planet_type *planet)
 	}
 
 	return 0;
-	  //else removePlanet(data);
-	//mailslotWrite(mailbox, data, sizeof(data));
+
 
 }
 
