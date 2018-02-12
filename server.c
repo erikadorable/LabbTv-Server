@@ -331,6 +331,13 @@ planet_type* updatePlanet(planet_type *planet)
 	double gravity = 6.67259e-11;
 	int dt = 10;
 	planet_type *currentPlanet = HeadPlanet;
+	char deadmsg[100] = "has sadly died, all because of darth vader.";
+	char deadmsgtosend[100] = { 0 };
+	char mailslotPid[100] = { 0 };
+	HANDLE hWrite;
+
+
+
 	while (planet->life > 0) {
 
 		double atot_x = 0;
@@ -343,8 +350,8 @@ planet_type* updatePlanet(planet_type *planet)
 			while (currentPlanet->next != NULL)
 			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
-				int r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
-				int a1 = gravity * (currentPlanet->mass) / (r*r);
+				double r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
+				double a1 = gravity * (currentPlanet->mass) / (r*r);
 
 				//acceleration i x och y led
 				atot_x += a1 * (currentPlanet->sx - planet->sx) / r;
@@ -359,20 +366,37 @@ planet_type* updatePlanet(planet_type *planet)
 
 		planet->vy = (planet->vy + atot_y * dt);
 		planet->sy = (planet->vy + atot_y * dt);
+		
 		planet->life--;
-		if (planet->sx >= 800 || planet->sy >= 600) //Om planeten går out of bounds.
+
+		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <=0) //Om planeten går out of bounds eller om den dör
 		{  
-			planet->life = 0;
+			if (planet->sx >= 800 || planet->sy >= 600) {
+				planet->life = 0;
+			}
+
 			removePlanet(planet);
+	
+			*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
+			*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
+		
+			hWrite = mailslotConnect(*mailslotPid);
+
+			if (hWrite == INVALID_HANDLE_VALUE) {
+				printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+				return;
+			}
+			else {
+				mailslotWrite(*mailslotPid, *deadmsgtosend, sizeof(*deadmsgtosend));
+				printf("Sucessfully written to mailslot\n");
+			}
+
+			Sleep(UPDATE_FREQ);
+
 			return 0;
-		}
-		if (planet->life <= 0)
-		{
-			removePlanet(planet);
-			return 0;
+
 		}
 
-		Sleep(UPDATE_FREQ);
 	}
 
 	return 0;
