@@ -180,7 +180,7 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
   
 	PAINTSTRUCT ps;
 	static int posX = 10;
-	int posY;
+	int posY = 0;
 	HANDLE context;
 	static DWORD color = 0;
 //	DWORD waitResult = WaitForSingleObject(myMutex, INFINITE);
@@ -206,21 +206,24 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 							/* here we draw a simple sinus curve in the window    */
 							/* just to show how pixels are drawn                  */
 			
-				WaitForSingleObject(myMutex,INFINITE);
-				while (currentPlanet != NULL)
-				{
-					
-					SetPixel(hDC, currentPlanet->sx,currentPlanet->sy, (COLORREF)color);
-					//currentPlanet = currentPlanet->next;
+				
+
+				while (currentPlanet != NULL) {
+
+					SetPixel(hDC, currentPlanet->sx, currentPlanet->sy, (COLORREF)color);
+
+					SetPixel(hDC, posX, posY, (COLORREF)color);
+
+			
+
 				}
-				ReleaseMutex(myMutex);
+					//currentPlanet = currentPlanet->next;
+				
+			
 			
 			
 
 
-			posX += 4;
-			posY = (int)(10 * sin(posX / (double)30) + 20);
-			SetPixel(hDC, posX % 547, posY, (COLORREF)color);
 			color += 12;
 			windowRefreshTimer(hWnd, UPDATE_FREQ);
 			break;
@@ -388,16 +391,18 @@ planet_type* updatePlanet(planet_type *planet)
 			removePlanet(planet);
 	
 			*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
-			*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
+			*deadmsgtosend = strcat_s(*deadmsgtosend, sizeof(*deadmsgtosend), "with pID: ");
+			*deadmsgtosend = strcat_s(*deadmsgtosend, sizeof(*deadmsgtosend), planet->pid);
 		
-			hWrite = mailslotConnect(*mailslotPid);
+			hWrite = mailslotConnect("\\\\.\\mailslot\\mailslot");
+			
 
 			if (hWrite == INVALID_HANDLE_VALUE) {
 				printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
 				return;
 			}
 			else {
-				mailslotWrite(*mailslotPid, *deadmsgtosend, sizeof(*deadmsgtosend));
+				mailslotWrite(hWrite, *deadmsgtosend, sizeof(*deadmsgtosend), planet->pid, sizeof(planet->pid));
 				printf("Sucessfully written to mailslot\n");
 			}
 
