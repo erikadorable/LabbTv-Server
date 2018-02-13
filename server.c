@@ -207,14 +207,14 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 							/* here we draw a simple sinus curve in the window    */
 							/* just to show how pixels are drawn                  */
 			
-				WaitForSingleObject(myMutex,INFINITE);
+			//	WaitForSingleObject(myMutex,INFINITE);
 				while (currentPlanet != NULL)
 				{
 					
 					SetPixel(hDC, currentPlanet->sx,currentPlanet->sy, (COLORREF)color);
 					currentPlanet = currentPlanet->next;
 				}
-				ReleaseMutex(myMutex);
+			//	ReleaseMutex(myMutex);
 			
 			
 
@@ -266,7 +266,7 @@ void addPlanet(planet_type *data)
 {
 	planet_type *currentPlanet = HeadPlanet;
 
-	WaitForSingleObject(myMutex, INFINITE);
+//	WaitForSingleObject(myMutex, INFINITE);
 	if (HeadPlanet == NULL) {
 		HeadPlanet = data;
 	}
@@ -281,7 +281,7 @@ void addPlanet(planet_type *data)
 		currentPlanet->next = data;
 
 	}
-	ReleaseMutex(myMutex);
+//	ReleaseMutex(myMutex);
 	threadCreate(updatePlanet, data);
 	// en thread create med update planet som input
 		
@@ -293,7 +293,7 @@ void removePlanet( planet_type *remove)
 	planet_type *planetToRemove = remove;
 	planet_type *previous = HeadPlanet;
 	
-	WaitForSingleObject(myMutex, INFINITE);
+	//WaitForSingleObject(myMutex, INFINITE);
 	
 	if (HeadPlanet == remove)
 	{
@@ -326,7 +326,7 @@ void removePlanet( planet_type *remove)
 		previous = currentPlanet;
 		currentPlanet = currentPlanet->next;
 	}
-	ReleaseMutex(myMutex);
+	//ReleaseMutex(myMutex);
 	return ;
 }
 planet_type* updatePlanet(planet_type *planet)
@@ -348,12 +348,10 @@ planet_type* updatePlanet(planet_type *planet)
 		double atot_x = 0;
 		double atot_y = 0;
 		
-		
-		
-		//WaitForSingleObject(myMutex, INFINITE);
 		while (currentPlanet->next != NULL)
 		{
-			if (currentPlanet != planet)
+			//if (memcmp(&currentPlanet, planet, sizeof(currentPlanet)) == 0)
+			if (memcmp(currentPlanet, planet, sizeof(currentPlanet)) == 0)
 			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
 				double r = sqrt(pow((currentPlanet->sx - planet->sx), 2) + pow((currentPlanet->sy - planet->sy), 2));
@@ -369,12 +367,15 @@ planet_type* updatePlanet(planet_type *planet)
 		
 		WaitForSingleObject(myMutex, INFINITE);
 			//planetens nya position och acceleration
-		planet->vx += ((planet->vx + atot_x) * dt);
-		planet->sx += ((planet->vx + atot_x) * dt);
+		planet->vx += atot_x * dt;
+		planet->sx += planet->vx * dt;
 
+		planet->vy += atot_y * dt;
+		planet->sy += planet->vy * dt;
+		/*
 		planet->vy += ((planet->vy + atot_y) * dt);
 		planet->sy += ((planet->vy + atot_y) * dt);
-		
+		*/
 		planet->life--;
 		ReleaseMutex(myMutex);
 		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <=0) //Om planeten går out of bounds eller om den dör
@@ -410,7 +411,7 @@ planet_type* updatePlanet(planet_type *planet)
 
 		Sleep(UPDATE_FREQ);
 
-		return 0;
+		
 
 		
 
