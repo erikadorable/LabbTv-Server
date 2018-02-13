@@ -207,14 +207,14 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 							/* here we draw a simple sinus curve in the window    */
 							/* just to show how pixels are drawn                  */
 			
-			//	WaitForSingleObject(myMutex,INFINITE);
+				WaitForSingleObject(myMutex,INFINITE);
 				while (currentPlanet != NULL)
 				{
 					
 					SetPixel(hDC, currentPlanet->sx,currentPlanet->sy, (COLORREF)color);
 					currentPlanet = currentPlanet->next;
 				}
-			//	ReleaseMutex(myMutex);
+				ReleaseMutex(myMutex);
 			
 			
 
@@ -266,7 +266,7 @@ void addPlanet(planet_type *data)
 {
 	planet_type *currentPlanet = HeadPlanet;
 
-//	WaitForSingleObject(myMutex, INFINITE);
+	WaitForSingleObject(myMutex, INFINITE);
 	if (HeadPlanet == NULL) {
 		HeadPlanet = data;
 	}
@@ -281,19 +281,19 @@ void addPlanet(planet_type *data)
 		currentPlanet->next = data;
 
 	}
-//	ReleaseMutex(myMutex);
+	ReleaseMutex(myMutex);
 	threadCreate(updatePlanet, data);
 	// en thread create med update planet som input
 		
 	
 }
-void removePlanet( planet_type *remove)
+void removePlanet(planet_type *remove)
 {
 	planet_type *currentPlanet = HeadPlanet;
 	planet_type *planetToRemove = remove;
 	planet_type *previous = HeadPlanet;
 	
-	//WaitForSingleObject(myMutex, INFINITE);
+WaitForSingleObject(myMutex, INFINITE);
 	
 	if (HeadPlanet == remove)
 	{
@@ -326,7 +326,7 @@ void removePlanet( planet_type *remove)
 		previous = currentPlanet;
 		currentPlanet = currentPlanet->next;
 	}
-	//ReleaseMutex(myMutex);
+	ReleaseMutex(myMutex);
 	return ;
 }
 planet_type* updatePlanet(planet_type *planet)
@@ -336,10 +336,14 @@ planet_type* updatePlanet(planet_type *planet)
 	double gravity = 6.67259e-11;
 	int dt = 10;
 	planet_type *currentPlanet = HeadPlanet;
-	char deadmsg[100] = "has sadly died, cause:";
-	char deadmsgtosend[100] = { 0 };
-	char mailslotPid[100] = { 0 };
 	HANDLE hWrite;
+	
+	
+	// SKAPAR UNIK MAILSLOT MHA PROCESSID ÄNDRAT I KLIENTEN KOLLA DÄR
+	char SlotWithPID[60];
+	sprintf(SlotWithPID, "\\\\.\\mailslot\\%d", planet->pid);
+	HANDLE box = mailslotCreate(SlotWithPID);
+	hWrite = mailslotConnect(box);
 
 
 
@@ -378,49 +382,52 @@ planet_type* updatePlanet(planet_type *planet)
 		*/
 		planet->life--;
 		ReleaseMutex(myMutex);
-		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <=0) //Om planeten går out of bounds eller om den dör
-		{  
+		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <= 0) //Om planeten går out of bounds eller om den dör
+		{
 			if (planet->sx >= 800 || planet->sy >= 600) {
 				//planet->life = 0;
-				strcat_s(deadmsg, sizeof("Out of bounds"), "Out of Bounds");
+				removePlanet(planet);
+
+				if (hWrite == INVALID_HANDLE_VALUE) {
+					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+					return;
+				}
+				else {
+
+					mailslotWrite(hWrite, "Your planet died because it went into a black hole", strlen("Your planet died because it went into a black hole"));
+					printf("Sucessfully written to mailslot\n");
+				}
+
+
 			}
-			else
-				strcat_s(deadmsg, sizeof("Lives < 0"), "Lives < 0");
-
-			removePlanet(planet);
-		}
-
-
-
-
-		//*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
-		//*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
-		/*
-		HANDLE box = mailslotCreate(Slot);
-		hWrite = mailslotConnect(box);
-
-		if (hWrite == INVALID_HANDLE_VALUE) {
-			printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
-			return;
-		}
-		else {
-			
-			mailslotWrite(hWrite, *deadmsgtosend, sizeof(*deadmsgtosend));
-			printf("Sucessfully written to mailslot\n");
-		}*/
-
-		Sleep(UPDATE_FREQ);
-
+			else {
+				removePlanet(planet);
 		
 
+				if (hWrite == INVALID_HANDLE_VALUE) {
+					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+					return;
+				}
+				else {
+
+					mailslotWrite(hWrite, "Your planet died because it DIED", strlen("Your planet died because it DIED"));
+					printf("Sucessfully written to mailslot\n");
+				}
+			}
+
+
+
+
+			Sleep(UPDATE_FREQ);
+
+
+		}
 		
 
 	}
 
 	return 0;
-	  //else removePlanet(data);
-	//mailslotWrite(mailbox, data, sizeof(data));
-
+	
 }
 
 
