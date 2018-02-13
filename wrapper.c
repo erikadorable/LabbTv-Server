@@ -23,7 +23,7 @@ DWORD threadCreate(LPTHREAD_START_ROUTINE threadFunc, LPVOID threadParams) {
 	HANDLE handle; // 32 bits värde för en os resurs
 	//Skapar en tråd med argumenten ( Security attributes, stackSize, Trådfunktionen, Trådparametrar, creation flags och trådID )
 	handle = CreateThread(NULL, DEFAULT_STACK_SIZE, threadFunc, threadParams, 0, &tID); 
-	
+
 	return tID;
 }
 
