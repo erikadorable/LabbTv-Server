@@ -27,7 +27,7 @@ planet_type *HeadPlanet;
 void addPlanet(planet_type *data);
 void removePlanet(planet_type *remove);
 planet_type* updatePlanet(planet_type *planet);
-
+LPTSTR Slot = TEXT("\\\\.\\mailslot\\mailslot");
 							/* the server uses a timer to periodically update the presentation window */
 							/* here is the timer id and timer period defined                          */
 
@@ -70,7 +70,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 	HWND hWnd;
 	DWORD threadID;
 	MSG msg;
-
+	myMutex = CreateMutex(NULL, FALSE, NULL);
 	
 
 							/* Create the window, 3 last parameters important */
@@ -117,14 +117,14 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdL
 /********************************************************************/
 DWORD WINAPI mailThread(LPVOID arg) {
 
-	myMutex = CreateMutex(NULL, FALSE, NULL);
+	
 	char buffer[1024];
 	DWORD bytesRead;
 	static int posY = 0;
 	HANDLE mailbox;
-	planet_type *data = (planet_type*) malloc(sizeof(planet_type));
+	planet_type *data = (planet_type*)malloc(sizeof(planet_type));
 	char text[50];
-	LPTSTR Slot = TEXT("\\\\.\\mailslot\\mailslot");
+	//LPTSTR Slot = TEXT("\\\\.\\mailslot\\mailslot");
 
 
 							/* create a mailslot that clients can use to pass requests through   */
@@ -140,13 +140,14 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/* in this example the server receives strings from the client side and   */
 							/* displays them in the presentation window                               */
 							/* NOTE: binary data can also be sent and received, e.g. planet structures*/
- 
-	bytesRead = mailslotRead(mailbox, data, sizeof(planet_type));
+
+	bytesRead = mailslotRead(mailbox, buffer, sizeof(buffer));
 
 	if(bytesRead != 0) {
 							/* NOTE: It is appropriate to replace this code with something */
 							/*       that match your needs here.                           */ 
-		
+		planet_type *data = (planet_type*)malloc(sizeof(planet_type));
+		memcpy(data, buffer, sizeof(planet_type));
 		data->next = NULL;
 		addPlanet(data);
 
@@ -211,17 +212,17 @@ LRESULT CALLBACK MainWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam 
 				{
 					
 					SetPixel(hDC, currentPlanet->sx,currentPlanet->sy, (COLORREF)color);
-					//currentPlanet = currentPlanet->next;
+					currentPlanet = currentPlanet->next;
 				}
 				ReleaseMutex(myMutex);
 			
 			
 
 
-			posX += 4;
+			/*posX += 4;
 			posY = (int)(10 * sin(posX / (double)30) + 20);
 			SetPixel(hDC, posX % 547, posY, (COLORREF)color);
-			color += 12;
+			color += 12;*/
 			windowRefreshTimer(hWnd, UPDATE_FREQ);
 			break;
 							/****************************************************************\
@@ -265,27 +266,24 @@ void addPlanet(planet_type *data)
 {
 	planet_type *currentPlanet = HeadPlanet;
 
-	
+	WaitForSingleObject(myMutex, INFINITE);
+	if (HeadPlanet == NULL) {
+		HeadPlanet = data;
+	}
 
-
-	
-		if (HeadPlanet == NULL) {
-			HeadPlanet = data;
-		}
-
-		else {
+	else {
 			
-			while (currentPlanet->next != NULL)
-			{
-				currentPlanet = currentPlanet->next;
-			}
-
-			currentPlanet->next = data;
-
+		while (currentPlanet->next != NULL)
+		{
+			currentPlanet = currentPlanet->next;
 		}
 
-		threadCreate(updatePlanet, data);
-		// en thread create med update planet som input
+		currentPlanet->next = data;
+
+	}
+	ReleaseMutex(myMutex);
+	threadCreate(updatePlanet, data);
+	// en thread create med update planet som input
 		
 	
 }
@@ -295,8 +293,8 @@ void removePlanet( planet_type *remove)
 	planet_type *planetToRemove = remove;
 	planet_type *previous = HeadPlanet;
 	
+	WaitForSingleObject(myMutex, INFINITE);
 	
-
 	if (HeadPlanet == remove)
 	{
 		free(HeadPlanet);
@@ -306,17 +304,14 @@ void removePlanet( planet_type *remove)
 	
 	while (currentPlanet->next != NULL)
 	{
-		
-		previous = currentPlanet;
-		currentPlanet = currentPlanet->next;
 
 		if (currentPlanet->next == remove)
 		{
-			WaitForSingleObject(myMutex, INFINITE);
+			
 			if (currentPlanet->next != NULL) 
 			{
 				planetToRemove = currentPlanet->next;
-				previous = currentPlanet;
+				previous = currentPlanet->next->next;
 				free(planetToRemove);
 				planetToRemove = NULL;
 				
@@ -326,10 +321,12 @@ void removePlanet( planet_type *remove)
 				free(currentPlanet);
 				previous->next = NULL;
 			}
-			ReleaseMutex(myMutex);
+			
 		}
-		
+		previous = currentPlanet;
+		currentPlanet = currentPlanet->next;
 	}
+	ReleaseMutex(myMutex);
 	return ;
 }
 planet_type* updatePlanet(planet_type *planet)
@@ -339,7 +336,7 @@ planet_type* updatePlanet(planet_type *planet)
 	double gravity = 6.67259e-11;
 	int dt = 10;
 	planet_type *currentPlanet = HeadPlanet;
-	char deadmsg[100] = "has sadly died, all because of darth vader.";
+	char deadmsg[100] = "has sadly died, cause:";
 	char deadmsgtosend[100] = { 0 };
 	char mailslotPid[100] = { 0 };
 	HANDLE hWrite;
@@ -353,59 +350,69 @@ planet_type* updatePlanet(planet_type *planet)
 		
 		
 		
-		WaitForSingleObject(myMutex, INFINITE);
+		//WaitForSingleObject(myMutex, INFINITE);
 		while (currentPlanet->next != NULL)
 		{
-			
+			if (currentPlanet != planet)
+			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
-			double r = sqrt(pow((currentPlanet->sx) - (planet->sx), 2) + pow((currentPlanet->sy) - (planet->sy), 2));
-			double a1 = gravity * (currentPlanet->mass) / (r*r);
+				double r = sqrt(pow((currentPlanet->sx - planet->sx), 2) + pow((currentPlanet->sy - planet->sy), 2));
+				double a1 = gravity * (currentPlanet->mass / (r*r));
 
 				//acceleration i x och y led
-			atot_x += a1 * (currentPlanet->sx - planet->sx) / r;
-			atot_y += a1 * (currentPlanet->sy - planet->sy) / r;
+				atot_x += a1 * ((currentPlanet->sx - planet->sx) / r);
+				atot_y += a1 * ((currentPlanet->sy - planet->sy) / r);
 
-			
+			}
 			currentPlanet = currentPlanet->next;
 		}
-		ReleaseMutex(myMutex);
 		
+		WaitForSingleObject(myMutex, INFINITE);
 			//planetens nya position och acceleration
-		planet->vx = (planet->vx + atot_x * dt);
-		planet->sx = (planet->vx + atot_x * dt);
+		planet->vx += ((planet->vx + atot_x) * dt);
+		planet->sx += ((planet->vx + atot_x) * dt);
 
-		planet->vy = (planet->vy + atot_y * dt);
-		planet->sy = (planet->vy + atot_y * dt);
+		planet->vy += ((planet->vy + atot_y) * dt);
+		planet->sy += ((planet->vy + atot_y) * dt);
 		
 		planet->life--;
-
+		ReleaseMutex(myMutex);
 		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <=0) //Om planeten går out of bounds eller om den dör
 		{  
 			if (planet->sx >= 800 || planet->sy >= 600) {
-				planet->life = 0;
+				//planet->life = 0;
+				strcat_s(deadmsg, sizeof("Out of bounds"), "Out of Bounds");
 			}
+			else
+				strcat_s(deadmsg, sizeof("Lives < 0"), "Lives < 0");
 
 			removePlanet(planet);
-	
-			*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
-			*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
-		
-			hWrite = mailslotConnect(*mailslotPid);
-
-			if (hWrite == INVALID_HANDLE_VALUE) {
-				printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
-				return;
-			}
-			else {
-				mailslotWrite(*mailslotPid, *deadmsgtosend, sizeof(*deadmsgtosend));
-				printf("Sucessfully written to mailslot\n");
-			}
-
-			Sleep(UPDATE_FREQ);
-
-			return 0;
-
 		}
+
+
+
+
+		//*deadmsgtosend = strcat_s(planet->name, sizeof(planet->name), deadmsg);
+		//*mailslotPid = strcat_s("\\\\.\\mailslot\\mailslot", sizeof("\\\\.\\mailslot\\mailslot"), planet->pid);
+		/*
+		HANDLE box = mailslotCreate(Slot);
+		hWrite = mailslotConnect(box);
+
+		if (hWrite == INVALID_HANDLE_VALUE) {
+			printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+			return;
+		}
+		else {
+			
+			mailslotWrite(hWrite, *deadmsgtosend, sizeof(*deadmsgtosend));
+			printf("Sucessfully written to mailslot\n");
+		}*/
+
+		Sleep(UPDATE_FREQ);
+
+		return 0;
+
+		
 
 	}
 
