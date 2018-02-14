@@ -23,7 +23,7 @@
 #include "wrapper.h"
 
 HANDLE myMutex;
-planet_type *HeadPlanet;
+planet_type *HeadPlanet = NULL;
 void addPlanet(planet_type *data);
 void removePlanet(planet_type *remove);
 planet_type* updatePlanet(planet_type *planet);
@@ -122,7 +122,7 @@ DWORD WINAPI mailThread(LPVOID arg) {
 	DWORD bytesRead;
 	static int posY = 0;
 	HANDLE mailbox;
-	planet_type *data = (planet_type*)malloc(sizeof(planet_type));
+	//planet_type *data = (planet_type*)malloc(sizeof(planet_type));
 	char text[50];
 	//LPTSTR Slot = TEXT("\\\\.\\mailslot\\mailslot");
 
@@ -148,7 +148,6 @@ DWORD WINAPI mailThread(LPVOID arg) {
 							/*       that match your needs here.                           */ 
 		planet_type *data = (planet_type*)malloc(sizeof(planet_type));
 		memcpy(data, buffer, sizeof(planet_type));
-		data->next = NULL;
 		addPlanet(data);
 
 
@@ -269,6 +268,7 @@ void addPlanet(planet_type *data)
 	WaitForSingleObject(myMutex, INFINITE);
 	if (HeadPlanet == NULL) {
 		HeadPlanet = data;
+		HeadPlanet->next = NULL;
 	}
 
 	else {
@@ -279,7 +279,7 @@ void addPlanet(planet_type *data)
 		}
 
 		currentPlanet->next = data;
-
+		currentPlanet->next->next = NULL;
 	}
 	ReleaseMutex(myMutex);
 	threadCreate(updatePlanet, data);
@@ -297,8 +297,14 @@ WaitForSingleObject(myMutex, INFINITE);
 	
 	if (HeadPlanet == remove)
 	{
-		free(HeadPlanet);
-	
+		if (HeadPlanet->next == NULL)
+		{
+			free(HeadPlanet);
+			return;
+		}
+		planetToRemove = remove;
+		HeadPlanet = HeadPlanet->next;
+		free(planetToRemove);
 		return;
 	}
 	
@@ -308,13 +314,12 @@ WaitForSingleObject(myMutex, INFINITE);
 		if (currentPlanet->next == remove)
 		{
 			
-			if (currentPlanet->next != NULL) 
+			if (currentPlanet->next->next != NULL) 
 			{
 				planetToRemove = currentPlanet->next;
 				previous = currentPlanet->next->next;
 				free(planetToRemove);
 				planetToRemove = NULL;
-				
 			}
 			else
 			{
@@ -341,7 +346,7 @@ planet_type* updatePlanet(planet_type *planet)
 	
 	// SKAPAR UNIK MAILSLOT MHA PROCESSID ÄNDRAT I KLIENTEN KOLLA DÄR
 	char SlotWithPID[30];
-	sprintf(SlotWithPID, "\\\\.\\mailslot\\%s", planet->pid);
+	sprintf(SlotWithPID, "\\\\.\\mailslot%s", planet->pid);
 	HANDLE box = mailslotCreate(SlotWithPID);
 	hWrite = mailslotConnect(box);
 
@@ -386,7 +391,7 @@ planet_type* updatePlanet(planet_type *planet)
 		{
 			if (planet->sx >= 800 || planet->sy >= 600) {
 				//planet->life = 0;
-				removePlanet(planet);
+				//removePlanet(planet);
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
 					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
@@ -401,7 +406,7 @@ planet_type* updatePlanet(planet_type *planet)
 
 			}
 			else {
-				removePlanet(planet);
+				//removePlanet(planet);
 		
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
