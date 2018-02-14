@@ -340,8 +340,8 @@ planet_type* updatePlanet(planet_type *planet)
 	
 	
 	// SKAPAR UNIK MAILSLOT MHA PROCESSID ÄNDRAT I KLIENTEN KOLLA DÄR
-	char SlotWithPID[60];
-	sprintf(SlotWithPID, "\\\\.\\mailslot\\%d", planet->pid);
+	char SlotWithPID[30];
+	sprintf(SlotWithPID, "\\\\.\\mailslot\\%s", planet->pid);
 	HANDLE box = mailslotCreate(SlotWithPID);
 	hWrite = mailslotConnect(box);
 
