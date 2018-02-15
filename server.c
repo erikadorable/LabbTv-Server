@@ -337,18 +337,17 @@ planet_type* updatePlanet(planet_type *planet)
 	
 	DWORD waitResult;
 	double gravity = 6.67259e-11;
-	int dt = 10;
+	int dt = UPDATE_FREQ;
 	planet_type *currentPlanet = HeadPlanet;
 	HANDLE hWrite;
-	
-	
+	char error[] = "Nej....";
+	char outOfBounds[] = "Your planet died because it went into a black hole";
+	char deathBecauseReasons[] = "Your planet died because it DIED";
 	// SKAPAR UNIK MAILSLOT MHA PROCESSID ÄNDRAT I KLIENTEN KOLLA DÄR
 	char SlotWithPID[30];
-	sprintf(SlotWithPID, "\\\\.\\mailslot%s", planet->pid);
-	HANDLE box = mailslotCreate(SlotWithPID);
-	hWrite = mailslotConnect(box);
-
-
+	sprintf(SlotWithPID, "\\\\.\\mailslot\\%s", planet->pid);
+	
+	hWrite = mailslotConnect(SlotWithPID);
 
 	while (planet->life > 0) {
 
@@ -356,12 +355,13 @@ planet_type* updatePlanet(planet_type *planet)
 		double atot_y = 0;
 		
 		planet_type *currentPlanet = HeadPlanet;
+		WaitForSingleObject(myMutex, INFINITE);
 		while (currentPlanet != NULL)
 		{
 			
 			
 			//if (memcmp(&currentPlanet, planet, sizeof(currentPlanet)) == 0)
-			if (!(memcmp(currentPlanet, planet, sizeof(currentPlanet)) ==0))
+			if (currentPlanet != planet)
 			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
 				double r = sqrt(pow((currentPlanet->sx - planet->sx), 2) + pow((currentPlanet->sy - planet->sy), 2));
@@ -375,7 +375,7 @@ planet_type* updatePlanet(planet_type *planet)
 			currentPlanet = currentPlanet->next;
 		}
 		
-		WaitForSingleObject(myMutex, INFINITE);
+
 			//planetens nya position och acceleration
 		planet->vx += (atot_x * dt);
 		planet->sx += (planet->vx * dt);
@@ -395,12 +395,12 @@ planet_type* updatePlanet(planet_type *planet)
 				
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
-					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+					printf(error);
 					return;
 				}
 				else {
 
-					mailslotWrite(hWrite, "Your planet died because it went into a black hole", strlen("Your planet died because it went into a black hole"));
+					mailslotWrite(hWrite,outOfBounds , strlen(outOfBounds));
 					printf("Sucessfully written to mailslot\n");
 				}
 
@@ -412,24 +412,24 @@ planet_type* updatePlanet(planet_type *planet)
 		
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
-					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
+					printf(error);
 					return;
 				}
 				else {
 
-					mailslotWrite(hWrite, "Your planet died because it DIED", strlen("Your planet died because it DIED"));
+					mailslotWrite(hWrite,deathBecauseReasons, strlen(deathBecauseReasons));
 					printf("Sucessfully written to mailslot\n");
 				}
 				removePlanet(planet);
 				break;
 			}
 
-			Sleep(UPDATE_FREQ);
+			
 
 
 		}
 		
-
+		Sleep(10);
 	}
 
 	return 0;
