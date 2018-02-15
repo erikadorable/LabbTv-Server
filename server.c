@@ -291,48 +291,46 @@ void removePlanet(planet_type *remove)
 {
 	planet_type *currentPlanet = HeadPlanet;
 	planet_type *planetToRemove = remove;
-	planet_type *previous = HeadPlanet;
+	planet_type *temp;
 	
-WaitForSingleObject(myMutex, INFINITE);
-	
-	if (HeadPlanet == remove)
+	WaitForSingleObject(myMutex, INFINITE);
+	if (remove == HeadPlanet)
 	{
-		if (HeadPlanet->next == NULL)
+		if (HeadPlanet->next != NULL)
+		{
+			temp = HeadPlanet;
+			HeadPlanet = HeadPlanet->next;
+			free(temp);
+			temp = NULL;
+		}
+		else
 		{
 			free(HeadPlanet);
-			return;
+			HeadPlanet = NULL;
 		}
-		planetToRemove = remove;
-		HeadPlanet = HeadPlanet->next;
-		free(planetToRemove);
-		return;
 	}
-	
-	while (currentPlanet->next != NULL)
+	else
 	{
-
-		if (currentPlanet->next == remove)
+		while (currentPlanet->next != NULL)
 		{
-			
-			if (currentPlanet->next->next != NULL) 
+			if (remove == currentPlanet->next)
 			{
-				planetToRemove = currentPlanet->next;
-				previous = currentPlanet->next->next;
-				free(planetToRemove);
-				planetToRemove = NULL;
+				if (currentPlanet->next != NULL)
+				{
+					temp = currentPlanet->next->next;
+					free(currentPlanet->next);
+					currentPlanet->next = temp;
+				}
+				else
+				{
+					free(currentPlanet->next);
+					currentPlanet->next = NULL;
+				}
 			}
-			else
-			{
-				free(currentPlanet);
-				previous->next = NULL;
-			}
-			
 		}
-		previous = currentPlanet;
-		currentPlanet = currentPlanet->next;
 	}
 	ReleaseMutex(myMutex);
-	return ;
+	
 }
 planet_type* updatePlanet(planet_type *planet)
 {
@@ -357,10 +355,13 @@ planet_type* updatePlanet(planet_type *planet)
 		double atot_x = 0;
 		double atot_y = 0;
 		
-		while (currentPlanet->next != NULL)
+		planet_type *currentPlanet = HeadPlanet;
+		while (currentPlanet != NULL)
 		{
+			
+			
 			//if (memcmp(&currentPlanet, planet, sizeof(currentPlanet)) == 0)
-			if (memcmp(currentPlanet, planet, sizeof(currentPlanet)) == 0)
+			if (!(memcmp(currentPlanet, planet, sizeof(currentPlanet)) ==0))
 			{
 				//r som används i a1 formeln(hur mycket andra planeter bidrar i acceleration)
 				double r = sqrt(pow((currentPlanet->sx - planet->sx), 2) + pow((currentPlanet->sy - planet->sy), 2));
@@ -376,11 +377,11 @@ planet_type* updatePlanet(planet_type *planet)
 		
 		WaitForSingleObject(myMutex, INFINITE);
 			//planetens nya position och acceleration
-		planet->vx += atot_x * dt;
-		planet->sx += planet->vx * dt;
+		planet->vx += (atot_x * dt);
+		planet->sx += (planet->vx * dt);
 
-		planet->vy += atot_y * dt;
-		planet->sy += planet->vy * dt;
+		planet->vy += (atot_y * dt);
+		planet->sy += (planet->vy * dt);
 		/*
 		planet->vy += ((planet->vy + atot_y) * dt);
 		planet->sy += ((planet->vy + atot_y) * dt);
@@ -390,8 +391,8 @@ planet_type* updatePlanet(planet_type *planet)
 		if (planet->sx >= 800 || planet->sy >= 600 || planet->life <= 0) //Om planeten går out of bounds eller om den dör
 		{
 			if (planet->sx >= 800 || planet->sy >= 600) {
-				//planet->life = 0;
-				//removePlanet(planet);
+				planet->life = 0;
+				
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
 					printf("Failed to get a handle to the mailslot!!\nHave you started the Client?\n");
@@ -403,10 +404,11 @@ planet_type* updatePlanet(planet_type *planet)
 					printf("Sucessfully written to mailslot\n");
 				}
 
-
+				removePlanet(planet);
+				break;
 			}
 			else {
-				//removePlanet(planet);
+				
 		
 
 				if (hWrite == INVALID_HANDLE_VALUE) {
@@ -418,10 +420,9 @@ planet_type* updatePlanet(planet_type *planet)
 					mailslotWrite(hWrite, "Your planet died because it DIED", strlen("Your planet died because it DIED"));
 					printf("Sucessfully written to mailslot\n");
 				}
+				removePlanet(planet);
+				break;
 			}
-
-
-
 
 			Sleep(UPDATE_FREQ);
 
