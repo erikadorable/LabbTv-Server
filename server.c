@@ -356,6 +356,7 @@ planet_type* updatePlanet(planet_type *planet)
 		double atot_y = 0;
 		
 		planet_type *currentPlanet = HeadPlanet;
+		WaitForSingleObject(myMutex, INFINITE);
 		while (currentPlanet != NULL)
 		{
 			
@@ -375,7 +376,7 @@ planet_type* updatePlanet(planet_type *planet)
 			currentPlanet = currentPlanet->next;
 		}
 		
-		WaitForSingleObject(myMutex, INFINITE);
+		
 			//planetens nya position och acceleration
 		planet->vx += (atot_x * dt);
 		planet->sx += (planet->vx * dt);
